@@ -1,23 +1,43 @@
-FROM openjdk:8-alpine
+FROM docker.1panel.dev/openjdk:17-alpine
 
 # Setup useful environment variables
-ENV CONF_HOME     /var/atlassian/confluence
-ENV CONF_INSTALL  /opt/atlassian/confluence
-ENV CONF_VERSION  9.1.1
+ENV CONF_HOME=/var/atlassian/confluence
+ENV CONF_INSTALL=/opt/atlassian/confluence
+ENV CONF_VERSION=9.1.1
 
-ENV JAVA_CACERTS  $JAVA_HOME/jre/lib/security/cacerts
-ENV CERTIFICATE   $CONF_HOME/certificate
+# 必须加上此配置，否则启动容器将会报错
+ENV ignore_jvm_version=true
+
+ENV JAVA_CACERTS=$JAVA_HOME/lib/security/cacerts
+ENV CERTIFICATE=$CONF_HOME/certificate
+
+# 设置APK下载地址镜像
+ENV APK_REPO=https://mirrors.ustc.edu.cn/alpine/v3.14
+
+# 官方下载地址
+#ENV CONF_DOWNLOAD_HOST=https://www.atlassian.com/software/confluence/downloads/binary
+#ENV MYSQL_DRIVER_DOWNLOAD_HOST=https://dev.mysql.com/get/Downloads/Connector-J
+
+# 设置镜像地址
+ENV CONF_DOWNLOAD_HOST=http://127.0.0.1
+ENV MYSQL_DRIVER_DOWNLOAD_HOST=http://127.0.0.1
+
+# 将代理破解包加入容器
+COPY "atlassian-agent.jar" /opt/atlassian/confluence/
 
 # Install Atlassian Confluence and helper tools and setup initial home
 # directory structure.
 RUN set -x \
+    && echo "${APK_REPO}/main" > /etc/apk/repositories \
+    && echo "${APK_REPO}/community" >> /etc/apk/repositories \
+    && cat /etc/apk/repositories  \
     && apk --no-cache add curl xmlstarlet bash ttf-dejavu libc6-compat gcompat \
     && mkdir -p                "${CONF_HOME}" \
     && chmod -R 700            "${CONF_HOME}" \
     && chown daemon:daemon     "${CONF_HOME}" \
     && mkdir -p                "${CONF_INSTALL}/conf" \
-    && curl -Ls                "https://www.atlassian.com/software/confluence/downloads/binary/atlassian-confluence-${CONF_VERSION}.tar.gz" | tar -xz --directory "${CONF_INSTALL}" --strip-components=1 --no-same-owner \
-    && curl -Ls                "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.44.tar.gz" | tar -xz --directory "${CONF_INSTALL}/confluence/WEB-INF/lib" --strip-components=1 --no-same-owner "mysql-connector-java-5.1.44/mysql-connector-java-5.1.44-bin.jar" \
+    && curl -Ls                "${CONF_DOWNLOAD_HOST}/atlassian-confluence-${CONF_VERSION}.tar.gz" | tar -xz --directory "${CONF_INSTALL}" --strip-components=1 --no-same-owner \
+    && curl -Ls                "${MYSQL_DRIVER_DOWNLOAD_HOST}/mysql-connector-j-8.0.33.tar.gz" | tar -xz --directory "${CONF_INSTALL}/confluence/WEB-INF/lib" --strip-components=1 --no-same-owner "mysql-connector-j-8.0.33/mysql-connector-j-8.0.33.jar" \
     && chmod -R 700            "${CONF_INSTALL}/conf" \
     && chmod -R 700            "${CONF_INSTALL}/temp" \
     && chmod -R 700            "${CONF_INSTALL}/logs" \
@@ -38,7 +58,8 @@ RUN set -x \
         --delete               "Server/Service/Engine/Host/Context/@debug" \
                                "${CONF_INSTALL}/conf/server.xml" \
     && touch -d "@0"           "${CONF_INSTALL}/conf/server.xml" \
-    && chown daemon:daemon     "${JAVA_CACERTS}"
+    && chown daemon:daemon     "${JAVA_CACERTS}" \
+    && echo 'export CATALINA_OPTS="-javaagent:/opt/atlassian/confluence/atlassian-agent.jar ${CATALINA_OPTS}"' >> /opt/atlassian/confluence/bin/setenv.sh
 
 # Use the default unprivileged account. This could be considered bad practice
 # on systems where multiple processes end up being executed by 'daemon' but

@@ -46,3 +46,38 @@ If you see out of date documentation, lack of tests, etc., you can help out by e
 - sending a pull request with modifications (remember to read [contributing guide](https://github.com/cptactionhank/docker-atlassian-confluence/blob/master/CONTRIBUTING.md) before.)
 
 Continuous Integration and Continuous Delivery is made possible with the great services from [GitHub](https://github.com), [Travis CI](https://travis-ci.org/), and [CircleCI](https://circleci.com/) written in [Ruby](https://www.ruby-lang.org/), using [RSpec](http://rspec.info/), [Capybara](https://jnicklas.github.io/capybara/), and [PhantomJS](http://phantomjs.org/) frameworks.
+
+## 构建镜像
+
+```shell
+docker build -t confluence:latest .
+```
+
+## 启动容器
+```shell
+docker run -d -p 8090:8090 confluence:latest
+```
+
+## 生成许可证
+
+在 `atlassian-agent.jar` 的目录下执行
+```shell
+java -jar atlassian-agent.jar -d -m xxx@qq.com -n conf-software -p conf -o http://你的IP:8090 -s XXXX-XXXX-XXXX-XXXX
+```
+
+## MYSQL配置
+
+`confluence` 所需要的 `MYSQL` 配置是有要求的，具体请参考官方文档 [Database Setup For MySQL](https://confluence.atlassian.com/doc/database-setup-for-mysql-128747.html)
+
+## 所需工具包
+
+如果官方下载地址慢，建议将软件包放到ftp服务器中，并修改Dockerfile中的地址，再进行构建。
+
+> 通过百度网盘分享的文件：conflence
+> 链接：https://pan.baidu.com/s/1SI63WerIoQb9unIAnZBY3A?pwd=bxcd
+> 提取码：bxcd
+
+## 申明
+
+- 本项目只做个人学习研究之用，不得用于商业用途！
+- 商业使用请向 [Atlassian](https://www.atlassian.com/) 购买正版，谢谢合作！
